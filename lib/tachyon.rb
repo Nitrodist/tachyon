@@ -1,36 +1,35 @@
-require "tachyon/version"
+require 'tachyon/version'
 
 class Tachyon
   class << self
-
     @@connection_cache = {}
 
     def insert(klass, data)
       connection_for(klass).execute(sql_for(klass, data))
-    rescue ActiveRecord::RecordNotUnique
-      # NO OP
     end
 
     def connection_for(klass)
       return @@connection_cache[klass] if @@connection_cache.has_key?(klass)
+
       @@connection_cache[klass] = klass.connection
     end
 
     def sql_for(klass, data)
-      columns = "`" + data.keys.join("`, `") + "`"
-      values = quote_data(data.values).join(", ")
+      quote_character = '"'
+      columns = quote_character + data.keys.join("#{quote_character}, #{quote_character}") + quote_character
+      values = quote_data(data.values).join(', ')
 
-      "INSERT INTO `#{klass.table_name}` (#{columns}) VALUES (#{values})"
+      "INSERT INTO #{quote_character}#{klass.table_name}#{quote_character} (#{columns}) VALUES (#{values})"
     end
 
     def quote_data(data)
-      data.map {|value| quote_value(value) }
+      data.map { |value| quote_value(value) }
     end
 
     def quote_value(value)
       case value
       when String then "'#{value.gsub("'", "''")}'"
-      when NilClass then "NULL"
+      when NilClass then 'NULL'
       else value
       end
     end
@@ -45,11 +44,10 @@ class Tachyon
       case attribute
       when Time then attribute.to_s(:db)
       when Date then attribute.to_s(:db)
-      when TrueClass then 1
-      when FalseClass then 0
+      when TrueClass then true
+      when FalseClass then false
       else attribute
       end
     end
-
   end
 end
